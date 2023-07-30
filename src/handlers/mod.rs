@@ -1,4 +1,5 @@
 use crate::config;
+use serde::{self, Deserialize, Serialize};
 
 #[cfg(windows)]
 pub mod ip_windows;
@@ -15,13 +16,13 @@ use self::ip::query_ip;
 mod http;
 use self::http::query_http;
 
-#[derive(Clone, Copy)]
+#[derive(Debug, PartialEq, Serialize, Deserialize, Clone, )]
 pub struct Response {
     pub status: Status,
     pub latency: i32,
 }
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Debug, PartialEq, Serialize, Deserialize, Clone)]
 pub enum Status {
     Success,
     Fail,

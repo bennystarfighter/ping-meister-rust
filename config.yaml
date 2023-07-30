@@ -1,12 +1,12 @@
+update_interval: 30
+targets:
 - 
   name: Google
-  update_interval: 10
   timeout: 5
   address: https://google.com
   type: http
 - 
   name: Cloudflare
-  update_interval: 10
   timeout: 5
   address: 1.1.1.1
   type: ip

@@ -3,21 +3,25 @@ use serde::{self, Deserialize, Serialize};
 use serde_yaml;
 use std::{fs::File, io::Read};
 
-#[derive(Debug, PartialEq, Serialize, Deserialize)]
-//#[serde(rename_all = "camelCase")]
+#[derive(Debug, PartialEq, Serialize, Deserialize, Clone)]
+pub struct Config {
+    pub update_interval: u32,
+    pub targets: Vec<Target>
+}
+
+#[derive(Debug, PartialEq, Serialize, Deserialize, Clone)]
 pub struct Target {
     pub name: String,
-    pub update_interval: u32,
     pub timeout: u32,
     pub address: String,
     pub r#type: String,
 }
 
-pub fn read_config(path: String) -> Vec<Target> {
+pub fn read_config(path: String) -> Config {
     let file_result = File::open(path);
     let mut file = match file_result {
         Ok(file) => file,
-        Err(error) => panic!("{:}", error),
+        Err(error) => panic!("Failed to parse config file, {:}", error),
     };
 
     let mut config_content = String::new();
