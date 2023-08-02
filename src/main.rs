@@ -2,17 +2,17 @@ pub mod config;
 pub mod handlers;
 
 use acidjson::AcidJson;
+use chrono::offset::Utc;
+use chrono::DateTime;
 use clap::Parser;
 use core::panic;
 use handlers::Response;
-use std::{collections::BTreeMap, fs, thread, time};
-use chrono::offset::Utc;
-use chrono::DateTime;
 use std::time::SystemTime;
+use std::{collections::BTreeMap, fs, thread, time};
 
-#[macro_use] extern crate prettytable;
-use prettytable::{Table, Row, Cell, Attr, color};
-
+#[macro_use]
+extern crate prettytable;
+use prettytable::{color, Attr, Cell, Row, Table};
 
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
@@ -33,6 +33,7 @@ fn main() {
     let json: AcidJson<BTreeMap<String, Response>>;
 
     match args.print_output {
+        // printing operation mode
         true => {
             if !std::path::Path::new(&args.database_file).exists() {
                 panic!("The file \"{:}\" does not exist", args.database_file);
@@ -47,9 +48,9 @@ fn main() {
 
             println!("[Ping-Meister -----------------]");
 
-            let mut table =  Table::new();
+            let mut table = Table::new();
             table.add_row(row!["Name", "Status", "Latency"]);
-            
+
             for response in jsonread.iter() {
                 let split: Vec<&str> = response.0.split('|').collect();
                 if split.len() != 2 {
@@ -57,26 +58,36 @@ fn main() {
                 }
 
                 let mut new_row: Row = Row::empty();
-                new_row.add_cell(
-                    Cell::new(split[0]).with_style(Attr::Bold),
-                );
+                new_row.add_cell(Cell::new(split[0]).with_style(Attr::Bold));
 
-                new_row.add_cell(match response.1.status {
-                    handlers::Status::Success => Cell::new("Success").with_style(Attr::BackgroundColor(color::BRIGHT_GREEN)),
-                    handlers::Status::Fail => Cell::new("Fail").with_style(Attr::BackgroundColor(color::BRIGHT_RED)),
-                    handlers::Status::Unknown => Cell::new("Unknown").with_style(Attr::BackgroundColor(color::YELLOW)),
-                });
-
-                new_row.add_cell(Cell::new(response.1.latency.to_string().as_str()));
+                match response.1 {
+                    Response::Success { latency } => {
+                        new_row.add_cell(
+                            Cell::new("Success")
+                                .with_style(Attr::BackgroundColor(color::BRIGHT_GREEN)),
+                        );
+                        new_row.add_cell(Cell::new(latency.to_string().as_str()))
+                    }
+                    Response::Failure => {
+                        new_row.add_cell(
+                            Cell::new("Success")
+                                .with_style(Attr::BackgroundColor(color::BRIGHT_RED)),
+                        );
+                        new_row.add_cell(Cell::new((-1).to_string().as_str()))
+                    }
+                }
 
                 table.add_row(new_row);
             }
 
             table.printstd();
         }
-        // Collect data
+        // Collecting data operation mode
         false => {
-            let conf: config::Config = config::read_config(args.config);
+            let conf: config::Config = match config::read_config(args.config) {
+                Ok(conf) => conf,
+                Err(error) => panic!("{:?}", error),
+            };
 
             if !dbpath.exists() {
                 let empty: BTreeMap<String, Response> = BTreeMap::new();
@@ -98,7 +109,11 @@ fn main() {
 
                 let system_time = SystemTime::now();
                 let datetime: DateTime<Utc> = system_time.into();
-                println!("Updating {:} targets at {:}.", &conf.targets.len(), datetime.format("%T"));
+                println!(
+                    "Updating {:} targets at {:}.",
+                    &conf.targets.len(),
+                    datetime.format("%T")
+                );
 
                 let mut responses: Vec<(config::Target, Response)> = Vec::new();
 
@@ -115,7 +130,8 @@ fn main() {
                 }
 
                 let elapsed_time = time::Instant::now().duration_since(start_time);
-                let sleep_left = conf.update_interval as i64 - elapsed_time.as_secs() as i64; if sleep_left >= 0  {
+                let sleep_left = conf.update_interval as i64 - elapsed_time.as_secs() as i64;
+                if sleep_left >= 0 {
                     thread::sleep(time::Duration::from_secs(sleep_left as u64));
                 };
             }

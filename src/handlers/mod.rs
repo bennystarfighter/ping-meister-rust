@@ -16,10 +16,10 @@ use self::ip::query_ip;
 mod http;
 use self::http::query_http;
 
-#[derive(Debug, PartialEq, Serialize, Deserialize, Clone, )]
-pub struct Response {
-    pub status: Status,
-    pub latency: i32,
+#[derive(Debug, PartialEq, Serialize, Deserialize, Clone)]
+pub enum Response {
+    Success { latency: i32 },
+    Failure,
 }
 
 #[derive(Debug, PartialEq, Serialize, Deserialize, Clone)]
@@ -34,7 +34,9 @@ impl config::Target {
         match self.r#type.to_lowercase().as_ref() {
             "ip" => query_ip(self),
             "http" => query_http(self),
-            &_ => todo!(),
+            &_ => {
+                panic!("type [{:}:] is not implemented yet", self.r#type)
+            },
         }
     }
 }
